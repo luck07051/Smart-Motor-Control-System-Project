@@ -73,6 +73,29 @@ public:
 		// Turn on READ & ignore ctrl lines (CLOCAL = 1)
 		tty.c_cflag |= CREAD | CLOCAL;
 
+		tty.c_lflag &= ~ICANON;
+		// Disable echo
+		tty.c_lflag &= ~ECHO;
+		// Disable erasure
+		tty.c_lflag &= ~ECHOE;
+		// Disable new-line echo
+		tty.c_lflag &= ~ECHONL;
+		// Disable interpretation of INTR, QUIT and SUSP
+		tty.c_lflag &= ~ISIG;
+		// Turn off s/w flow ctrl
+		tty.c_iflag &= ~(IXON | IXOFF | IXANY);
+		// Disable any special handling of received bytes
+		tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL);
+
+		// Prevent special interpretation of output bytes (e.g. newline chars)
+		tty.c_oflag &= ~OPOST;
+		// Prevent conversion of newline to carriage return/line feed
+		tty.c_oflag &= ~ONLCR;
+		// Prevent conversion of tabs to spaces (NOT PRESENT ON LINUX)
+		// tty.c_oflag &= ~OXTABS;
+		// Prevent removal of C-d chars (0x004) in output (NOT PRESENT ON LINUX)
+		// tty.c_oflag &= ~ONOEOT;
+
 		// Wait for up to VTIME deciseconds.
 		// Returning as soon as VMIN data is received.
 		tty.c_cc[VTIME] = 1;
