@@ -21,3 +21,5 @@ Using [ocornut/imgui: Dear ImGui](https://github.com/ocornut/imgui) for GUI. Mak
 # Hardware
 
 The motor we use is [Smart Motor SM23165D](https://www.animatics.com/products/smartmotor/class-5-d-style-smartmotor/sm23165d.html) (I believe...).
+
+The laser distance detector we use is [D071 IRS-180-2](https://magic-doufu.github.io/Industry-4.0-Web/sensors/Arduino/IRS-180.html#%E7%89%B9%E6%80%A7%EF%BC%9A).
