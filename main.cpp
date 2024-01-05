@@ -20,6 +20,7 @@ using std::chrono::milliseconds;
 
 #include "motor.h"
 #include "gui.h"
+#include "distance_detect.h"
 
 #define PLOT_LEN 100
 
@@ -32,6 +33,8 @@ enum Operating_Mode {
 
 int main() {
 	Motor motor("/dev/ttyUSB0");
+	
+	DistanceDetect detector("/dev/ttyUSB2");
 
 	motor.go_absolute_position(1000);
 	sleep(1);
@@ -63,6 +66,10 @@ int main() {
 	float a_min = 0;
 	float a_max = 20;
 
+	//ball's position boundary
+	float min_ball_p = -10;
+	float max_ball_p = 10;
+
 	// state value
 	struct {
 		float pt, v, a, old_pt, old_v, old_a;
@@ -82,6 +89,14 @@ int main() {
 	data_v_mode.old_v = data_v_mode.v;
 	data_v_mode.old_a = data_v_mode.a;
 
+	struct {
+		float P, I, D, ball_p;
+	} data_l_mode;
+	data_l_mode.P = 0;
+	data_l_mode.I = 0;
+	data_l_mode.D = 0;
+	data_l_mode.ball_p = 0;
+
 	// gui value
 	ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar;
 	bool p_open = true;
@@ -96,7 +111,7 @@ int main() {
 
 		ImGui::RadioButton("Position Mode", &operating_mode, 0); ImGui::SameLine();
 		ImGui::RadioButton("Velocity Mode", &operating_mode, 1); ImGui::SameLine();
-		ImGui::RadioButton("System", &operating_mode, 2);
+		ImGui::RadioButton("Laser Mode", &operating_mode, 2);
 
 		// motor info (mixing the timing for better lag experience)
 		if (count == 0) {
@@ -221,7 +236,38 @@ int main() {
 					motor.set_acceleration(data_v_mode.a);
 					data_v_mode.old_a = data_v_mode.a;
 				}
-			}
+			} 
+		} else if (operating_mode == 2){				//laser mode
+            if (old_operating_mode != operating_mode) {
+        	    motor.set_mode(Mode::Velocity);
+                old_operating_mode = operating_mode;
+				// TODO: jhgfds
+				// DEBUG: ekql 
+            }
+
+			ImGui::SeparatorText("Operator");
+
+			ImGui::SliderFloat("P", &data_l_mode.P, -10.0f, 10.0f);
+			ImGui::SliderFloat("I", &data_l_mode.I, -10.0f, 10.0f);
+			ImGui::SliderFloat("D", &data_l_mode.D, -10.0f, 10.0f);		
+
+
+			ImGui::SeparatorText("Result");
+
+			data_l_mode.ball_p = detector.get_ball_position();
+			data_l_mode.ball_p = (data_l_mode.ball_p < min_ball_p) ? min_ball_p : (data_l_mode.ball_p > max_ball_p) ? max_ball_p : data_l_mode.ball_p;
+		 	ImGui::SliderFloat("ball's position", &data_l_mode.ball_p, -10.0f, 10.0f, "%.2f");
+			
+			motor.set_velocity(-data_l_mode.ball_p);
+			motor.go();
+			
+
+			ImGui::Text("Position: %.1f", position);
+			ImGui::PlotLines("Position", positions, PLOT_LEN, 0, NULL, FLT_MAX, FLT_MAX, ImVec2(0, 100));
+
+			ImGui::Text("Velocity: %.1f", velocity);
+			ImGui::PlotLines("Velocity", velocitys, PLOT_LEN, 0, NULL, -vm_max, vm_max, ImVec2(0, 100));
+			
 		}
 
 		ImGui::End();
