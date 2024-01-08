@@ -4,20 +4,26 @@
 #include <unistd.h> // write(), read(), close()
 
 #define BUFFER_LEN 256
+#define AVG_LEN 10
+
 
 class DistanceDetect {
 private:
 	const int PT_CONST = 4;
-
+	const float time = 0.01;
+	const float SPEEDOFSOUND = 343.0;
+	
 	char buffer[BUFFER_LEN];
 	int serial_port;
+	int count = 0;
+	float avg_distance[AVG_LEN] = { 0 };	
 
 	int receive() {
 		usleep(20 * 100); // wait some time for device send data
         
         tcflush(serial_port, TCIOFLUSH);
         //while (read(serial_port, &c, sizeof(c))){}
-        usleep(10 *1000);
+        usleep(1000000 * time);
         int n = read(serial_port, buffer, sizeof(buffer));
         buffer[n] = '\0';
 		return n;
@@ -99,14 +105,34 @@ public:
         close(serial_port);
     }
     
-    float get_ball_position(){
-        receive();
+    float get_ball_position(){	
+		receive();
         if (!buffer){
             sleep(0.1);
-            receive();
+			receive();
         }
-        
-        return std::stof(buffer) - 12;
-        
+
+		float distance = (std::stoi(buffer) * SPEEDOFSOUND) / (2.0f * 10000.0f) - 12;
+        return distance;
     }
+	
+	float get_filted_position(){
+		float sum = 0.0;
+		float avg = 0.0;
+
+		float distance = get_ball_position();
+		if (count < 10){
+			count ++;
+		}else {
+			count = 0;
+		}
+		avg_distance[count] = distance;
+
+		for (int i = 0; i < AVG_LEN; ++i){
+			sum += avg_distance[i];  
+		}
+
+		avg = sum / AVG_LEN;
+		return avg;
+	}
 };

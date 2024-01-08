@@ -34,11 +34,8 @@ enum Operating_Mode {
 int main() {
 	Motor motor("/dev/ttyUSB0");
 	
-	DistanceDetect detector("/dev/ttyUSB2");
+	//DistanceDetect detector("/dev/ttyUSB1");
 
-	motor.go_absolute_position(1000);
-	sleep(1);
-	motor.go_absolute_position(0);
 	sleep(1);
 
 	Gui gui;
@@ -65,10 +62,14 @@ int main() {
 	float v_max = 20;
 	float a_min = 0;
 	float a_max = 20;
+	float min_sol_p = -125;
+	float max_sol_p = 125;
+
 
 	//ball's position boundary
 	float min_ball_p = -10;
 	float max_ball_p = 10;
+
 
 	// state value
 	struct {
@@ -90,11 +91,12 @@ int main() {
 	data_v_mode.old_a = data_v_mode.a;
 
 	struct {
-		float P, I, D, ball_p;
+		float P, I, D, reduction, ball_p;
 	} data_l_mode;
 	data_l_mode.P = 0;
 	data_l_mode.I = 0;
 	data_l_mode.D = 0;
+	data_l_mode.reduction = 20;
 	data_l_mode.ball_p = 0;
 
 	// gui value
@@ -240,28 +242,38 @@ int main() {
 		} else if (operating_mode == 2){				//laser mode
             if (old_operating_mode != operating_mode) {
         	    motor.set_mode(Mode::Velocity);
+				motor.set_acceleration(motor.a_limit);
+				motor.set_origin();
                 old_operating_mode = operating_mode;
-				// TODO: jhgfds
-				// DEBUG: ekql 
             }
 
 			ImGui::SeparatorText("Operator");
 
-			ImGui::SliderFloat("P", &data_l_mode.P, -10.0f, 10.0f);
-			ImGui::SliderFloat("I", &data_l_mode.I, -10.0f, 10.0f);
-			ImGui::SliderFloat("D", &data_l_mode.D, -10.0f, 10.0f);		
-
+			ImGui::SliderFloat("P", &data_l_mode.P, 0.0f, 10.0f);
+			ImGui::SliderFloat("I", &data_l_mode.I, 0.0f, 10.0f);
+			ImGui::SliderFloat("D", &data_l_mode.D, 0.0f, 10.0f);		
+			ImGui::SliderFloat("Reduction", &data_l_mode.reduction, 1.0f, 100.0f);
 
 			ImGui::SeparatorText("Result");
 
-			data_l_mode.ball_p = detector.get_ball_position();
+			data_l_mode.ball_p = detector.get_filted_position();
 			data_l_mode.ball_p = (data_l_mode.ball_p < min_ball_p) ? min_ball_p : (data_l_mode.ball_p > max_ball_p) ? max_ball_p : data_l_mode.ball_p;
 		 	ImGui::SliderFloat("ball's position", &data_l_mode.ball_p, -10.0f, 10.0f, "%.2f");
 			
-			motor.set_velocity(-data_l_mode.ball_p);
-			motor.go();
-			
 
+			float sol_p = -(data_l_mode.P * data_l_mode.ball_p +
+						data_l_mode.I * detector.get_intergral_position() +
+						data_l_mode.D * detector.get_delta_position()) / data_l_mode.reduction;
+			
+			sol_p = (sol_p < min_sol_p) ? min_sol_p : (sol_p > max_sol_p) ? max_sol_p : sol_p;
+
+			ImGui::Text("data_l_mode.ball_p: %.1f", data_l_mode.ball_p);
+			ImGui::Text("sol_p: %.1f", sol_p);
+
+			//motor.set_velocity(sol_v);
+			//motor.go();
+			motor.go_absolute_position(sol_p);
+			
 			ImGui::Text("Position: %.1f", position);
 			ImGui::PlotLines("Position", positions, PLOT_LEN, 0, NULL, FLT_MAX, FLT_MAX, ImVec2(0, 100));
 
