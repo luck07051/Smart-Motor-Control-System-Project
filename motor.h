@@ -139,11 +139,13 @@ public:
 	}
 
 	void set_velocity(float velocity) {
+		velocity = velocity < v_limit ? velocity : v_limit;
 		sprintf(buffer, "VT=%d\r", (int)(velocity * VT_CONST));
 		send(buffer);
 	}
 
 	void set_acceleration(float acceleration) {
+		acceleration = acceleration < a_limit ? acceleration : a_limit;
 		sprintf(buffer, "ADT=%d\r", (int)(acceleration * ADT_CONST));
 		send(buffer);
 	}
