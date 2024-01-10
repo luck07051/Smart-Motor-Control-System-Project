@@ -10,22 +10,21 @@
 class DistanceDetect {
 private:
 	const int PT_CONST = 4;
-	const float time = 0.01;
+	const float DELTA_TIME = 0.01;
 	const float SPEEDOFSOUND = 343.0;
-	
+
 	char buffer[BUFFER_LEN];
 	int serial_port;
 	int count = 0;
-	float avg_distance[AVG_LEN] = { 0 };	
+	float avg_distance[AVG_LEN] = { 0 };
 
 	int receive() {
 		usleep(20 * 100); // wait some time for device send data
-        
-        tcflush(serial_port, TCIOFLUSH);
-        //while (read(serial_port, &c, sizeof(c))){}
-        usleep(1000000 * time);
-        int n = read(serial_port, buffer, sizeof(buffer));
-        buffer[n] = '\0';
+
+		tcflush(serial_port, TCIOFLUSH);
+		usleep(DELTA_TIME * 1000000);
+		int n = read(serial_port, buffer, sizeof(buffer));
+		buffer[n] = '\0';
 		return n;
 	}
 
@@ -100,22 +99,21 @@ public:
 			exit(1);
 		}
 	}
-    
-    ~DistanceDetect(){
-        close(serial_port);
-    }
-    
-    float get_ball_position(){	
-		receive();
-        if (!buffer){
-            sleep(0.1);
+
+	~DistanceDetect(){
+		close(serial_port);
+	}
+
+	float get_ball_position(){
+		if (receive() <= 0) {
+			usleep(DELTA_TIME * 1000000);
 			receive();
-        }
+		}
 
 		float distance = (std::stoi(buffer) * SPEEDOFSOUND) / (2.0f * 10000.0f) - 12;
-        return distance;
-    }
-	
+		return distance;
+	}
+
 	float get_filted_position(){
 		float sum = 0.0;
 		float avg = 0.0;
@@ -129,7 +127,7 @@ public:
 		avg_distance[count] = distance;
 
 		for (int i = 0; i < AVG_LEN; ++i){
-			sum += avg_distance[i];  
+			sum += avg_distance[i];
 		}
 
 		avg = sum / AVG_LEN;
