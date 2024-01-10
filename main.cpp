@@ -25,6 +25,8 @@ using std::chrono::milliseconds;
 
 #define PLOT_LEN 100
 
+#define BOUND(a, min, max) ((a) > (max) ? (max) : ( (a) < (min) ? (min) : (a) ))
+
 enum Operating_Mode {
 	Position,
 	Velocity,
@@ -259,17 +261,13 @@ sleep(1);
 
 			// data_l_mode.ball_p = detector.get_filted_position();
 			system.new_position(data_l_mode.ball_p);
-			if (data_l_mode.ball_p < min_ball_p) {
-				data_l_mode.ball_p = min_ball_p;
-			} else if (data_l_mode.ball_p > max_ball_p) {
-				data_l_mode.ball_p = max_ball_p;
-			}
+			data_l_mode.ball_p = BOUND(data_l_mode.ball_p, min_ball_p, max_ball_p);
 
 			ImGui::SliderFloat("ball's position", &data_l_mode.ball_p, min_ball_p, max_ball_p, "%.2f");
 
 			float sol_p = -system.pid(data_l_mode.P, data_l_mode.I, data_l_mode.D) / data_l_mode.scale;
 
-			sol_p = (sol_p < min_sol_p) ? min_sol_p : (sol_p > max_sol_p) ? max_sol_p : sol_p;
+			sol_p = BOUND(sol_p, min_sol_p, max_sol_p);
 
 			ImGui::Text("data_l_mode.ball_p: %.1f", data_l_mode.ball_p);
 			ImGui::Text("sol_p: %.1f", sol_p);
